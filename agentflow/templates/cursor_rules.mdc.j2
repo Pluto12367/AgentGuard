@@ -1,0 +1,35 @@
+{#-
+  Cursor 规则模板（MDC 格式）
+  由 CursorRulesGenerator 渲染；与 AGENTS.md 的流程/安全/测试约束保持同源。
+-#}
+---
+description: {{ description }}
+globs: {{ globs }}
+alwaysApply: {{ always_apply | lower }}
+---
+
+# AgentFlow Rules — {{ project_name }}
+
+## 工作流（阶段强制）
+
+按任务规模路由流程，进入下一阶段前必须产出本阶段产物：
+
+{% for phase in phases %}
+- **{{ phase.name }}**{% if phase.artifacts %}：{{ phase.artifacts | join("；") }}{% endif %}
+{% endfor %}
+
+## 安全约束
+
+- 受保护文件（禁删，改需确认）：{{ protected_files | join("、") }}
+- 禁止写入：{{ deny_paths | join("、") }}
+{% if allow_paths %}- 白名单模式：仅允许写入 {{ allow_paths | join("、") }}
+{% endif %}
+{% if forbid_new_dependencies %}- 禁止新增第三方依赖。
+{% endif %}
+{% if require_diff_preview %}- 修改文件前先给 diff 预览，等待确认。
+{% endif %}
+- 危险命令一律禁止执行（如 {{ blocked_commands_sample | join("、") }} 等）。
+
+## 测试闭环
+
+- 改完代码运行 `{{ test_command }}`；失败按证据修复，最多重试 {{ max_retries }} 次，通过后附输出摘要。

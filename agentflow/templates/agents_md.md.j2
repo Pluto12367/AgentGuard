@@ -1,0 +1,61 @@
+{#-
+  AGENTS.md 模板（六段式：概述/技术栈/规范/阶段产物/安全约束/测试要求）
+  由 AgentsMdGenerator 渲染；建议 Environment(trim_blocks=True, lstrip_blocks=True)。
+-#}
+# AGENTS.md — {{ project_name }}
+
+> 本文件由 AgentFlow v{{ agentflow_version }} 于 {{ generated_at }} 生成。
+> 这是给 AI Agent 看的项目规则：请严格遵守；不确定时先询问用户，不要自行猜测。
+
+## 1. 项目概述
+
+- 项目名：{{ project_name }}
+- 主语言：{{ language }}
+{% if languages %}- 识别到的技术栈：{{ languages | join("、") }}
+{% endif %}
+
+## 2. 技术栈与工具链
+
+{% if package_managers %}- 包管理：{{ package_managers | join("、") }}
+{% endif %}
+{% if test_frameworks %}- 测试框架：{{ test_frameworks | join("、") }}
+{% endif %}
+{% if build_tools %}- 构建/任务工具：{{ build_tools | join("、") }}
+{% endif %}
+{% if not package_managers and not test_frameworks and not build_tools %}- （扫描未识别出工具链，按通用规范执行）
+{% endif %}
+
+## 3. 代码规范
+
+- 修改代码前先阅读相邻代码，保持既有风格（命名、注释密度、异常处理方式）。
+- 新增公共 API 必须附带类型标注与 docstring。
+- 禁止提交调试打印、被注释掉的死代码。
+
+## 4. 流程阶段与产物要求（强制）
+
+任务按规模路由到不同流程；**进入下一阶段前必须产出本阶段产物**，否则会被拦截：
+
+{% for phase in phases %}
+### {{ phase.name }}
+{% for item in phase.artifacts %}
+- {{ item }}
+{% endfor %}
+{% endfor %}
+
+## 5. 安全约束（护栏，违反即被拦截）
+
+- 受保护文件（禁止删除，修改需强确认）：{{ protected_files | join("、") }}
+- 禁止写入路径：{{ deny_paths | join("、") }}
+{% if allow_paths %}- 白名单模式已启用，仅允许写入：{{ allow_paths | join("、") }}
+{% endif %}
+{% if forbid_new_dependencies %}- 禁止新增第三方依赖。
+{% endif %}
+{% if require_diff_preview %}- 任何文件修改前，必须先给出 diff 预览并等待用户确认。
+{% endif %}
+- 禁止执行危险命令，例如：{{ blocked_commands_sample | join("；") }}
+
+## 6. 测试要求（闭环）
+
+- 测试命令：`{{ test_command }}`
+- 改动完成后必须运行测试；失败时依据失败证据修复，最多重试 {{ max_retries }} 次。
+- 通过后须附上测试输出摘要作为证据。

@@ -1,0 +1,96 @@
+# ============================================================
+# AgentFlow 配置文件（全量注释示例）
+#
+# - 由 `agentflow init` 生成的文件与本示例结构一致（init 写出的是默认值）
+# - 放在项目根目录；`agentflow status` 会自动向上查找本文件
+# - schema 定义见 agentflow/models/config.py（含各字段默认值）
+# ============================================================
+
+version: 1
+
+# ------------------------------------------------------------
+# 项目基本信息
+# ------------------------------------------------------------
+project:
+  name: my-project          # 项目名（init 时默认取目录名）
+  language: python          # 主语言，影响规则生成的措辞
+
+# ------------------------------------------------------------
+# 流程：三档规模各自走的阶段序列 + 测试闭环重试上限
+#
+# 可用阶段：analyze / design / implement / test / review / done
+# 约束（配置加载时校验）：非空、无重复、必须以 done 结尾
+# ------------------------------------------------------------
+workflow:
+  small:                    # 小任务：直接实现 → 测试 → 完成
+    - implement
+    - test
+    - done
+  medium:                   # 中任务：完整六阶段
+    - analyze
+    - design
+    - implement
+    - test
+    - review
+    - done
+  large:                    # 大任务：完整六阶段（后续版本附加更严格产物要求）
+    - analyze
+    - design
+    - implement
+    - test
+    - review
+    - done
+  max_retries: 3            # 测试失败打回 Agent 修复的最大次数
+
+# ------------------------------------------------------------
+# 安全护栏
+# ------------------------------------------------------------
+guardrails:
+  # 受保护文件（glob）：删除一律拦截；修改必须强确认
+  protected_files:
+    - .env
+    - '.env.*'
+    - '*.pem'
+    - '*.key'
+    - agentflow.yaml         # 配置自身也受保护，防止被 Agent 随手改掉
+
+  # 写入白名单（glob）：留空（[]）表示关闭白名单模式；
+  # 一旦非空，则只有匹配这些模式的路径允许改动（最严格的模式）
+  allow_paths: []
+
+  # 写入黑名单（glob）：任何情况下都不允许改动
+  deny_paths:
+    - '.git/**'
+    - '.agentflow/**'
+
+  # 禁止新增第三方依赖：
+  # 改动 pyproject.toml / requirements*.txt / package.json 等依赖清单时拦截
+  forbid_new_dependencies: true
+
+  # 任何文件修改前必须 diff 预览并确认
+  require_diff_preview: true
+
+  # 危险命令拦截清单（子串匹配，不区分大小写，命中即拦截）
+  blocked_commands:
+    - 'rm -rf /'
+    - 'rm -rf ~'
+    - 'rm -rf /*'
+    - 'git push --force'
+    - 'git push -f'
+    - 'git branch -D main'
+    - 'git clean -fdx'
+    - 'curl | sh'
+    - 'curl | bash'
+    - 'wget | sh'
+    - 'del /s /q'
+    - 'rd /s /q'
+    - 'format c:'
+    - ':(){ :|:& };:'        # fork bomb
+
+# ------------------------------------------------------------
+# 测试闭环
+# ------------------------------------------------------------
+testing:
+  command: pytest -q        # 项目测试命令（任意 shell 命令均可）
+  timeout_seconds: 600      # 单次执行超时（秒），超时计为失败
+  coverage: false           # true 时生成覆盖率报告（TODO P1）
